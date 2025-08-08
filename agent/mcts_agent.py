@@ -16,10 +16,6 @@ from utils.metric import MetricValue, WorstMetricValue
 from utils.response import extract_code, extract_text_up_to_code, wrap_code, extract_review
 from utils.server_utils import call_validate
 from utils.mcts import linear_decay, exponential_decay, piecewise_decay, dynamic_piecewise_decay
-from agent.agent import Agent
-import multiprocessing
-from pathos.multiprocessing import ProcessingPool as Pool
-from concurrent.futures import ThreadPoolExecutor
 import threading
 
 logger = logging.getLogger("ml-master")
@@ -75,14 +71,13 @@ review_func_spec = FunctionSpec(
 )
 
 
-class MCTSAgent(Agent):
+class MCTSAgent:
     def __init__(
         self,
         task_desc: str,
         cfg: Config,
         journal: Journal,
     ):
-        super().__init__(task_desc=task_desc, cfg=cfg, journal=journal)
         self.task_desc = task_desc
         self.cfg = cfg
         self.acfg = cfg.agent
@@ -92,7 +87,7 @@ class MCTSAgent(Agent):
         self.current_step = 0
         self.current_node: MCTSNode | None = None
         self.all_root = True
-        self.virtual_root = MCTSNode(parent=None, plan="virtual plan", code="virtual code", metric=WorstMetricValue(), stage="root")
+        self.virtual_root = MCTSNode(parent=None, plan="virtual plan", code="# virtual code", metric=WorstMetricValue(), stage="root")
         self.current_node_list = []
         self.journal.append(self.virtual_root)
         self.best_metric: float = None
@@ -100,7 +95,78 @@ class MCTSAgent(Agent):
         self.search_start_time = None
         self.journal_lock = threading.Lock()
         self.save_node_lock = threading.Lock()
+        self.start_time = time.time()
+        
+    @property
+    def _prompt_environment(self):
+        pkgs = [
+            "numpy",
+            "pandas",
+            "scikit-learn",
+            "statsmodels",
+            "xgboost",
+            "lightGBM",
+            "torch",
+            "torchvision",
+            "torch-geometric",
+            "bayesian-optimization",
+            "timm",
+            "transformers",
+            "nltk",
+            "spacy",
+        ]
+        random.shuffle(pkgs)
+        pkg_str = ", ".join([f"`{p}`" for p in pkgs])
+
+        env_prompt = {
+            "Installed Packages": f"Your solution can use any relevant machine learning packages such as: {pkg_str}. Feel free to use any other packages too (all packages are already installed!). For neural networks we suggest using PyTorch rather than TensorFlow."
+        }
+        return env_prompt
     
+    @property
+    def _prompt_impl_guideline(self):
+        tot_time_elapsed = time.time() - self.start_time
+        tot_time_remaining = self.acfg.time_limit - tot_time_elapsed
+        exec_timeout = int(min(self.cfg.exec.timeout, tot_time_remaining))
+
+        impl_guideline = [
+            f"<TOTAL_TIME_REMAINING: {format_time(tot_time_remaining)}>",
+            f"<TOTAL_STEPS_REMAINING: {self.acfg.steps - self.current_step}>",
+            "The code must not only implement the proposed solution but also **print the evaluation metric computed on a hold-out validation set**. **Without this metric, the solution cannot be evaluated, rendering the entire code invalid.**,",
+            "**AND MOST IMPORTANTLY SAVE PREDICTIONS ON THE PROVIDED UNLABELED TEST DATA IN A `submission.csv` FILE IN THE ./submission/ DIRECTORY.**",
+            "The code should be a single-file python program that is self-contained and can be executed as-is.",
+            "No parts of the code should be skipped, don't terminate the before finishing the script.",
+            "Your response should only contain a single code block.",
+            f"Be aware of the running time of the code, it should complete within {humanize.naturaldelta(exec_timeout)}.",
+            'All the provided input data is stored in "./input" directory.',
+            '**You MUST submit predictions on the provided unlabeled test data in a `submission.csv` file** file in the "./working" directory as described in the task description** This is extremely important since this file is used for grading/evaluation. DO NOT FORGET THE submission.csv file!',
+            'You can also use the "./working" directory to store any temporary files that your code needs to create.',
+            "REMEMBER THE ./submission/submission.csv FILE!!!!! The correct directory is important too.",
+            "If you use `DataLoader`, you need to increase the parameter `num_workers` to speed up the training process."
+        ]
+        if self.acfg.expose_prediction:
+            impl_guideline.append(
+                "The implementation should include a predict() function, "
+                "allowing users to seamlessly reuse the code to make predictions on new data. "
+                "The prediction function should be well-documented, especially the function signature."
+            )
+
+        if self.acfg.k_fold_validation > 1:
+            impl_guideline.append(
+                f"The evaluation should be based on {self.acfg.k_fold_validation}-fold cross-validation but only if that's an appropriate evaluation for the task at hand."
+            )
+
+        return {"Implementation guideline": impl_guideline}
+    
+    @property
+    def _prompt_resp_fmt(self):
+        return {
+            "Response format": (
+                "Your response should be a brief outline/sketch of your proposed solution in natural language (3-5 sentences), "
+                "followed by a single markdown code block (wrapped in ```) which implements this solution and prints out the evaluation metric. "
+                "There should be no additional headings or text in your response. Just natural language text followed by a newline and then the markdown code block. "
+            )
+        }
     
     def _draft(self) -> MCTSNode:
         logger.info("Starting Drafting a new Node.")
@@ -150,7 +216,7 @@ class MCTSAgent(Agent):
         self.virtual_root.add_expected_child_count()
         plan, code = self.plan_and_code_query(prompt_complete)
         new_node = MCTSNode(plan=plan, code=code, parent=self.virtual_root, stage="draft", local_best_node=self.virtual_root)
-        logger.info(f"Drafted new node {new_node.id}")
+        logger.info(f"Drafted a new node {new_node.id} successfully!")
         return new_node
 
     def _improve(self, parent_node: MCTSNode) -> MCTSNode:
@@ -207,7 +273,7 @@ class MCTSAgent(Agent):
 
         plan, code = self.plan_and_code_query(prompt_complete)
         new_node = MCTSNode(plan=plan, code=code, parent=parent_node, stage="improve", local_best_node=parent_node.local_best_node)
-        logger.info(f"Improved node {parent_node.id} to create new node {new_node.id}")
+        logger.info(f"Improving node {parent_node.id} to create new node {new_node.id}")
         return new_node
 
     def _debug(self, parent_node: MCTSNode) -> MCTSNode:
@@ -264,7 +330,7 @@ class MCTSAgent(Agent):
         parent_node.add_expected_child_count()
         plan, code = self.plan_and_code_query(prompt_complete)
         new_node = MCTSNode(plan=plan, code=code, parent=parent_node, stage="debug", local_best_node=parent_node.local_best_node)
-        logger.info(f"Debugged node {parent_node.id} to create new node {new_node.id}")
+        logger.info(f"Debugging node {parent_node.id} to create new node {new_node.id}")
         return new_node
     
     def plan_and_code_query(self, prompt, retries=3) -> tuple[str, str]:
@@ -288,7 +354,12 @@ class MCTSAgent(Agent):
             logger.info("Plan + code extraction failed, retrying...")
         logger.info("Final plan + code extraction attempt failed, giving up...")
         return "", completion_text  # type: ignore
-        
+    
+    def update_data_preview(
+        self,
+    ):
+        self.data_preview = data_preview.generate(self.cfg.workspace_dir)
+
     def backpropagate(self, node: MCTSNode, value: float, add_to_tree=True):
         logger.info(f"node {node.id} start backpropagating with reward {value}.")
         while node != None:
@@ -303,7 +374,6 @@ class MCTSAgent(Agent):
                 logger.info(f"Draft node {node.id} is unlocked.")
             if node.improve_failure_depth>0:
                 node.improve_failure_depth = 0
-
             node.update(value, add_to_tree)
             node = node.parent
             
@@ -370,7 +440,6 @@ class MCTSAgent(Agent):
                 response["is_bug"]
                 or node.exc_type is not None
                 or response["metric"] is None
-                # or response["has_csv_submission"] == False
                 or has_csv_submission == False
             )
             if not node.is_buggy and self.acfg.check_format:
@@ -380,7 +449,6 @@ class MCTSAgent(Agent):
                 if status:
                     if not res['is_valid']:
                         logger.warning(f"Node {node.id} is marked as buggy because file: submission.csv is invalid.")
-                        # node.is_buggy = True
                         node.is_valid = False
                         node._term_out.append(f"\n{res['result']}")
                         node.analysis = "This previous solution runs without any bugs, but the format of the generated submission file is incorrect."
@@ -490,7 +558,6 @@ class MCTSAgent(Agent):
             response["is_bug"]
             or node.exc_type is not None
             or response["metric"] is None
-            # or response["has_csv_submission"] == False
             or has_csv_submission == False
         )
         if not node.is_buggy and self.acfg.check_format:
@@ -539,7 +606,6 @@ class MCTSAgent(Agent):
 
     def get_C(self):
         dcfg =  self.cfg.agent.decay
-        # logger.info(f"current decay type is {dcfg.decay_type}.")
         if dcfg.decay_type == "linear":
             linear_cfg = dcfg.linear_decay
             return linear_decay(
@@ -788,7 +854,6 @@ class MCTSAgent(Agent):
                     logger.info(f"Node {self.best_node.id} is still the best node")
             else:
                 if self.best_node.is_valid is False:
-                    
                     logger.info(f"Node {self.best_node.id} is invalid, {result_node.id} is the best node so far")
                     self.best_node = result_node
                     best_solution_dir = self.cfg.workspace_dir / "best_solution"
@@ -813,7 +878,7 @@ class MCTSAgent(Agent):
         else:
             logger.info(f"result node has bug.")
         if self.best_node:
-            logger.info(f"Best Node metric value is {self.best_node.metric.value}.")
+            logger.info(f"Best metric value is {self.best_node.metric.value}.")
 
         if not self.acfg.save_all_submission and result_node and os.path.exists(submission_file_path):
             os.remove(submission_file_path)
@@ -822,6 +887,6 @@ class MCTSAgent(Agent):
             logger.info(f"agent return root to main")
             return self.virtual_root
         else:
-            logger.info(f"agent return to main {result_node.id}")
+            logger.info(f"agent return {result_node.id} to main")
             return result_node
         

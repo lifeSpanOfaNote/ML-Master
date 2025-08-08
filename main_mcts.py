@@ -100,16 +100,16 @@ def run():
     httpx_logger: logging.Logger = logging.getLogger("httpx")
     httpx_logger.setLevel(logging.WARNING)
 
-    logger = logging.getLogger("aide")
+    logger = logging.getLogger("ml-master")
     # save logs to files as well, using same format
     cfg.log_dir.mkdir(parents=True, exist_ok=True)
 
     # we'll have a normal log file and verbose log file. Only normal to console
-    file_handler = logging.FileHandler(cfg.log_dir / "aide.log")
+    file_handler = logging.FileHandler(cfg.log_dir / "ml-master.log")
     file_handler.setFormatter(logging.Formatter(log_format))
     file_handler.addFilter(VerboseFilter())
 
-    verbose_file_handler = logging.FileHandler(cfg.log_dir / "aide.verbose.log")
+    verbose_file_handler = logging.FileHandler(cfg.log_dir / "ml-master.verbose.log")
     verbose_file_handler.setFormatter(logging.Formatter(log_format))
 
     console_handler = logging.StreamHandler(sys.stdout)
@@ -161,35 +161,6 @@ def run():
         status.update("[green]Generating code...")
         return res
 
-    def generate_live():
-        tree = journal_to_rich_tree(journal)
-        prog.update(prog.task_ids[0], completed=global_step)
-
-        file_paths = [
-            f"Result visualization:\n[yellow]▶ {str((cfg.log_dir / 'tree_plot.html'))}",
-            f"Agent workspace directory:\n[yellow]▶ {str(cfg.workspace_dir)}",
-            f"Experiment log directory:\n[yellow]▶ {str(cfg.log_dir)}",
-        ]
-        left = Group(
-            Panel(Text(task_desc_str.strip()), title="Task description"),
-            prog,
-            status,
-        )
-        right = tree
-        wide = Group(*file_paths)
-
-        return Panel(
-            Group(
-                Padding(wide, (1, 1, 1, 1)),
-                Columns(
-                    [Padding(left, (1, 2, 1, 1)), Padding(right, (1, 1, 1, 2))],
-                    equal=True,
-                ),
-            ),
-            title=f'[b]AIDE is working on experiment: [bold green]"{cfg.exp_name}[/b]"',
-            subtitle="Press [b]Ctrl+C[/b] to stop the run",
-        )
-
     def step_task(node=None):
         if node:
             logger.info(f"[step_task] Processing node: {node.id}")
@@ -201,11 +172,10 @@ def run():
     total_steps = cfg.agent.steps
     
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-
         futures = {executor.submit(step_task) for _ in range(min(max_workers, total_steps))}
         completed = 0
         lock = threading.Lock()
-        while completed < total_steps:
+        while completed <= total_steps:
             
             done, _ = wait(futures, return_when=FIRST_COMPLETED)
             
@@ -220,14 +190,13 @@ def run():
 
                 with lock:
                     save_run(cfg, journal)
-                    completed = len(journal)
+                    completed = len(journal)-1. # Exclude virtual node
                     if completed == total_steps:
                         logger.info(journal_to_string_tree(journal))
 
                 if completed + len(futures) < total_steps:
                     futures.add(executor.submit(step_task, cur_node))
         
-
     interpreter.cleanup_session(-1)
 
 
