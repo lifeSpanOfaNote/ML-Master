@@ -224,10 +224,10 @@ def prep_agent_workspace(cfg: Config):
 def save_run(cfg: Config, journal: Journal):
     cfg.log_dir.mkdir(parents=True, exist_ok=True)
 
-    filtered_journal = filter_journal(journal)
+    # filtered_journal = filter_journal(journal)
     # save journal
-    serialize.dump_json(journal, cfg.log_dir / "journal.json")
-    serialize.dump_json(filtered_journal, cfg.log_dir / "filtered_journal.json")
+    # serialize.dump_json(journal, cfg.log_dir / "journal.json")
+    # serialize.dump_json(filtered_journal, cfg.log_dir / "filtered_journal.json")
     # save config
     OmegaConf.save(config=cfg, f=cfg.log_dir / "config_mcts.yaml")
     
@@ -236,15 +236,15 @@ def save_run(cfg: Config, journal: Journal):
     if best_node is not None:
         with open(cfg.log_dir / "best_solution.py", "w") as f:
             f.write(best_node.code)
-    # concatenate logs
-    with open(cfg.log_dir / "full_log.txt", "w") as f:
-        f.write(
-            concat_logs(
-                cfg.log_dir / "ml-master.log",
-                cfg.workspace_dir / "best_solution" / "node_id.txt",
-                cfg.log_dir / "filtered_journal.json",
-            )
-        )
+    # # concatenate logs
+    # with open(cfg.log_dir / "full_log.txt", "w") as f:
+    #     f.write(
+    #         concat_logs(
+    #             cfg.log_dir / "ml-master.log",
+    #             cfg.workspace_dir / "best_solution" / "node_id.txt",
+    #             cfg.log_dir / "filtered_journal.json",
+    #         )
+    #     )
 
 
 def concat_logs(chrono_log: Path, best_node: Path, journal: Path):

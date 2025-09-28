@@ -457,6 +457,7 @@ class MCTSAgent:
                         logger.info(f"Node {node.id} file: submission.csv is valid.")
                 else:
                     logger.error(f"An unexpected error occurred: {res}, skip this stage.")
+                    node.is_valid = True # set is_valid to True as default if using server is set but we can not connext to the server
 
             if node.is_buggy:
                 logger.info(
