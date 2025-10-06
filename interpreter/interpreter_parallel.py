@@ -228,7 +228,13 @@ class Interpreter:
             for i in range(start_cpu_id_session,start_cpu_id_session+cpu_number_per_session):
                 cpu_set.add(i)
             logger.info(f"has set process_id:{process_id} to use cpu: {cpu_set}")
-            pre_code = "import os\nos.sched_setaffinity(0, {cpu_set})\n".format(cpu_set=cpu_set)
+            
+            # Only use sched_setaffinity on Linux (not available on macOS)
+            import platform
+            if platform.system() == "Linux" and hasattr(os, 'sched_setaffinity'):
+                pre_code = "import os\nos.sched_setaffinity(0, {cpu_set})\n".format(cpu_set=cpu_set)
+            else:
+                pre_code = "# CPU affinity not available on this platform\n"
             
             code  = self.replace_submission_name(code=code, _id=id)
             code = pre_code + code
