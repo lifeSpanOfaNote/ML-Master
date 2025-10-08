@@ -1,8 +1,48 @@
  * Serving Flask app 'grading_server'
  * Debug mode: off
-[2025-10-04 17:02:56,398] [_internal.py:97] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+[2025-10-07 18:30:19,931] [_internal.py:97] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
  * Running on all addresses (0.0.0.0)
  * Running on http://127.0.0.1:5001
- * Running on http://10.42.55.132:5001
-[2025-10-04 17:02:56,398] [_internal.py:97] [33mPress CTRL+C to quit[0m
-[2025-10-04 17:02:56,488] [_internal.py:97] 127.0.0.1 - - [04/Oct/2025 17:02:56] "GET /health HTTP/1.1" 200 -
+ * Running on http://10.41.131.191:5001
+[2025-10-07 18:30:19,931] [_internal.py:97] [33mPress CTRL+C to quit[0m
+[2025-10-07 18:30:20,224] [_internal.py:97] 127.0.0.1 - - [07/Oct/2025 18:30:20] "GET /health HTTP/1.1" 200 -
+[2025-10-07 18:34:36,005] [_internal.py:97] 127.0.0.1 - - [07/Oct/2025 18:34:36] "GET /health HTTP/1.1" 200 -
+competition_id is plant-pathology-2020-fgvc7
+/home/music2/.cache/mle-bench/data/plant-pathology-2020-fgvc7/prepared/private
+[2025-10-07 18:34:36,279] [_internal.py:97] 127.0.0.1 - - [07/Oct/2025 18:34:36] "POST /validate HTTP/1.1" 200 -
+[2025-10-07 18:34:51,019] [_internal.py:97] 127.0.0.1 - - [07/Oct/2025 18:34:51] "GET /health HTTP/1.1" 200 -
+competition_id is plant-pathology-2020-fgvc7
+/home/music2/.cache/mle-bench/data/plant-pathology-2020-fgvc7/prepared/private
+[2025-10-07 18:34:51,027] [_internal.py:97] 127.0.0.1 - - [07/Oct/2025 18:34:51] "POST /validate HTTP/1.1" 200 -
+[2025-10-07 18:41:24,587] [_internal.py:97] 127.0.0.1 - - [07/Oct/2025 18:41:24] "GET /health HTTP/1.1" 200 -
+competition_id is plant-pathology-2020-fgvc7
+/home/music2/.cache/mle-bench/data/plant-pathology-2020-fgvc7/prepared/private
+[2025-10-07 18:41:24,595] [_internal.py:97] 127.0.0.1 - - [07/Oct/2025 18:41:24] "POST /validate HTTP/1.1" 200 -
+[2025-10-07 18:43:00,965] [_internal.py:97] 127.0.0.1 - - [07/Oct/2025 18:43:00] "GET /health HTTP/1.1" 200 -
+competition_id is plant-pathology-2020-fgvc7
+/home/music2/.cache/mle-bench/data/plant-pathology-2020-fgvc7/prepared/private
+[2025-10-07 18:43:00,972] [_internal.py:97] 127.0.0.1 - - [07/Oct/2025 18:43:00] "POST /validate HTTP/1.1" 200 -
+[2025-10-07 18:44:51,277] [_internal.py:97] 127.0.0.1 - - [07/Oct/2025 18:44:51] "GET /health HTTP/1.1" 200 -
+competition_id is plant-pathology-2020-fgvc7
+/home/music2/.cache/mle-bench/data/plant-pathology-2020-fgvc7/prepared/private
+[2025-10-07 18:44:51,284] [_internal.py:97] 127.0.0.1 - - [07/Oct/2025 18:44:51] "POST /validate HTTP/1.1" 200 -
+[2025-10-07 18:51:12,514] [_internal.py:97] 127.0.0.1 - - [07/Oct/2025 18:51:12] "GET /health HTTP/1.1" 200 -
+competition_id is plant-pathology-2020-fgvc7
+/home/music2/.cache/mle-bench/data/plant-pathology-2020-fgvc7/prepared/private
+[2025-10-07 18:51:12,522] [_internal.py:97] 127.0.0.1 - - [07/Oct/2025 18:51:12] "POST /validate HTTP/1.1" 200 -
+[2025-10-07 19:09:29,818] [_internal.py:97] 127.0.0.1 - - [07/Oct/2025 19:09:29] "GET /health HTTP/1.1" 200 -
+competition_id is plant-pathology-2020-fgvc7
+/home/music2/.cache/mle-bench/data/plant-pathology-2020-fgvc7/prepared/private
+[2025-10-07 19:09:29,827] [_internal.py:97] 127.0.0.1 - - [07/Oct/2025 19:09:29] "POST /validate HTTP/1.1" 200 -
+[2025-10-07 19:13:00,060] [_internal.py:97] 127.0.0.1 - - [07/Oct/2025 19:13:00] "GET /health HTTP/1.1" 200 -
+competition_id is plant-pathology-2020-fgvc7
+/home/music2/.cache/mle-bench/data/plant-pathology-2020-fgvc7/prepared/private
+[2025-10-07 19:13:00,068] [_internal.py:97] 127.0.0.1 - - [07/Oct/2025 19:13:00] "POST /validate HTTP/1.1" 200 -
+[2025-10-07 19:15:33,078] [_internal.py:97] 127.0.0.1 - - [07/Oct/2025 19:15:33] "GET /health HTTP/1.1" 200 -
+competition_id is plant-pathology-2020-fgvc7
+/home/music2/.cache/mle-bench/data/plant-pathology-2020-fgvc7/prepared/private
+[2025-10-07 19:15:33,085] [_internal.py:97] 127.0.0.1 - - [07/Oct/2025 19:15:33] "POST /validate HTTP/1.1" 200 -
+[2025-10-07 19:25:55,283] [_internal.py:97] 127.0.0.1 - - [07/Oct/2025 19:25:55] "GET /health HTTP/1.1" 200 -
+competition_id is plant-pathology-2020-fgvc7
+/home/music2/.cache/mle-bench/data/plant-pathology-2020-fgvc7/prepared/private
+[2025-10-07 19:25:55,290] [_internal.py:97] 127.0.0.1 - - [07/Oct/2025 19:25:55] "POST /validate HTTP/1.1" 200 -

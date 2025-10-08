@@ -227,22 +227,28 @@ class LLM:
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         stop_tokens: Optional[Union[str, List[str]]] = None,
+        return_metrics: bool = False,
         **kwargs
-    ) -> Union[str, Any]:
+    ) -> Union[str, Dict[str, Any]]:
         """
-        Text Completion
+        Text Completion with optional metrics
 
         Args:
             prompt: Text prompt
             temperature: Overrides the default temperature parameter
             max_tokens: Overrides the default maximum number of tokens
             stop_tokens: Overrides the default stop tokens
-            stream: Whether to use streaming output
+            return_metrics: If True, return dict with text and metrics; if False, return text only
             **kwargs: Additional parameters passed to the OpenAI API
 
         Returns:
-            If stream=False, returns the generated text  
-            If stream=True, returns a streaming response object
+            If return_metrics=False: returns the generated text string
+            If return_metrics=True: returns dict with:
+                - text: generated text
+                - input_tokens: number of input tokens
+                - output_tokens: number of output tokens  
+                - response_time: response time in seconds
+                - total_tokens: total tokens used
         """
 
         # use function parameters or default values
@@ -257,6 +263,7 @@ class LLM:
             "temperature": temp,
             "max_tokens": tokens,
             "stream": stream,
+            "stream_options": {"include_usage": True},  # Request usage info in streaming
             **kwargs
         }
         
@@ -267,13 +274,37 @@ class LLM:
         attempt = 0
         while attempt < self.retry_time:
             try:
+                start_time = time.time()
                 response = self.client.completions.create(**params)
                 
                 full_text = ""
+                usage_info = None
+                
                 for chunk in response:
                     if chunk.choices and chunk.choices[0].text is not None:
                         full_text += chunk.choices[0].text
-                return full_text
+                    # Capture usage information from the last chunk
+                    if hasattr(chunk, 'usage') and chunk.usage is not None:
+                        usage_info = chunk.usage
+                
+                response_time = time.time() - start_time
+                
+                if return_metrics:
+                    # Extract token counts from usage info
+                    input_tokens = usage_info.prompt_tokens if usage_info else 0
+                    output_tokens = usage_info.completion_tokens if usage_info else 0
+                    total_tokens = usage_info.total_tokens if usage_info else 0
+                    
+                    return {
+                        "text": full_text,
+                        "input_tokens": input_tokens,
+                        "output_tokens": output_tokens,
+                        "total_tokens": total_tokens,
+                        "response_time": response_time,
+                    }
+                else:
+                    return full_text
+                    
             except Exception as e:
                 attempt += 1
                 logger.warning(f"calling llm failed, retrying {attempt}/retry, error message: {e}")

@@ -70,6 +70,21 @@ def query(
         **model_kwargs,
     )
     logger.info(f"response: {output}", extra={"verbose": True})
+    
+    # Log token usage and timing metrics WITHOUT verbose flag so it appears in both logs
+    tokens_per_sec = out_tok_count / req_time if req_time > 0 else 0
+    logger.info(
+        f"[METRICS] Input tokens: {in_tok_count}, "
+        f"Output tokens: {out_tok_count}, "
+        f"Total tokens: {in_tok_count + out_tok_count}, "
+        f"Response time: {req_time:.2f}s, "
+        f"Tokens/sec: {tokens_per_sec:.1f}"
+    )
+    
+    # Log additional model info (verbose only)
+    if info:
+        logger.info(f"[MODEL INFO] {info}", extra={"verbose": True})
+    
     logger.info(f"---Query complete---", extra={"verbose": True})
 
     return output
